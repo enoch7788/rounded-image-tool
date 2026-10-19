@@ -104,3 +104,1681 @@
 <body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col selection:bg-brand-100 selection:text-brand-700">
 
   <!-- 顶部全局通知 Toast -->
+  <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- 顶部导航栏 -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <!-- 品牌标识 -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-lg tracking-tight text-slate-900">图片圆角/格式转换/压缩工具</h1>
+            <span class="px-2 py-0.5 text-[11px] font-semibold bg-brand-50 text-brand-700 border border-brand-200 rounded-full">v2.5</span>
+          </div>
+          <p class="text-xs text-slate-500 hidden sm:block">透明圆角/正圆裁剪 · 智能色彩量化压缩 · 多格式转换</p>
+        </div>
+      </div>
+
+  </header>
+
+  <!-- 主体三栏工作区 -->
+  <main class="flex-1 max-w-[1600px] w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+    <!-- 左栏：批量上传与图片列表管理 (占 4 列) -->
+    <section class="lg:col-span-4 flex flex-col gap-4 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <h2 class="font-semibold text-slate-900 text-base">批量文件队列</h2>
+          <span id="queueCountBadge" class="px-2 py-0.5 text-xs font-mono font-semibold bg-slate-100 text-slate-700 rounded-full">0 张</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="document.getElementById('fileInput').click()" class="text-xs font-medium text-brand-600 hover:text-brand-700 px-2.5 py-1 rounded-md hover:bg-brand-50 transition">
+            + 添加图片
+          </button>
+          <button id="btnClearAll" onclick="clearAllImages()" class="text-xs font-medium text-rose-600 hover:text-rose-700 px-2.5 py-1 rounded-md hover:bg-rose-50 transition disabled:opacity-40 disabled:pointer-events-none" disabled>
+            清空列表
+          </button>
+        </div>
+      </div>
+
+      <!-- 拖拽上传区 -->
+      <div id="dropZone" onclick="document.getElementById('fileInput').click()" class="border-2 border-dashed border-slate-300 hover:border-brand-500 bg-slate-50/70 hover:bg-brand-50/30 rounded-xl p-5 text-center cursor-pointer transition group">
+        <input id="fileInput" type="file" multiple accept="image/png,image/jpeg,image/jpg,image/gif,image/bmp,image/webp" class="hidden" onchange="handleFileSelect(event)" />
+        <div class="w-11 h-11 rounded-full bg-white border border-slate-200 shadow-sm mx-auto flex items-center justify-center text-brand-600 group-hover:scale-105 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+          </svg>
+        </div>
+        <p class="mt-2.5 text-sm font-medium text-slate-700">拖拽多张图片到此处，或 <span class="text-brand-600 underline">点击浏览上传</span></p>
+        <p class="mt-1 text-xs text-slate-400">支持 PNG、JPG/JPEG、GIF、BMP、WEBP 等格式批量导入</p>
+      </div>
+
+      <!-- 总体统计条 -->
+      <div id="batchStatsBar" class="hidden bg-slate-50 border border-slate-200/80 rounded-xl p-3 grid grid-cols-3 gap-2 text-center">
+        <div>
+          <div class="text-[11px] text-slate-400">原始总体积</div>
+          <div id="statTotalOrig" class="text-xs font-mono font-semibold text-slate-700 mt-0.5">0 KB</div>
+        </div>
+        <div class="border-x border-slate-200">
+          <div class="text-[11px] text-slate-400">处理后总体积</div>
+          <div id="statTotalOut" class="text-xs font-mono font-semibold text-brand-600 mt-0.5">0 KB</div>
+        </div>
+        <div>
+          <div class="text-[11px] text-slate-400">总体变化率</div>
+          <div id="statTotalRatio" class="text-xs font-mono font-semibold text-emerald-600 mt-0.5">0%</div>
+        </div>
+      </div>
+
+      <!-- 图片文件列表容器 -->
+      <div id="imageListContainer" class="flex flex-col gap-2.5 max-h-[500px] overflow-y-auto pr-1">
+        <!-- 空状态提示 -->
+        <div id="emptyQueueState" class="py-10 text-center">
+          <p class="text-sm text-slate-400">队列中暂无图片，请拖拽或点击上方区域上传</p>
+        </div>
+      </div>
+
+      <!-- 底部打包下载与批量操作栏 -->
+      <div class="pt-3 border-t border-slate-100 flex flex-col gap-2">
+        <button id="btnDownloadZip" onclick="downloadAllAsZip()" disabled class="w-full py-2.5 px-4 rounded-xl font-semibold text-sm text-white bg-brand-600 hover:bg-brand-700 active:bg-brand-800 shadow-sm shadow-brand-500/20 transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+          </svg>
+          <span id="zipBtnText">打包下载全部处理结果 (ZIP)</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 中栏：交互式前后对比预览区 (占 5 列) -->
+    <section class="lg:col-span-5 flex flex-col gap-4 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+      <!-- 预览区顶部控制栏 -->
+      <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
+        <div>
+          <h2 class="font-semibold text-slate-900 text-base flex items-center gap-2">
+            <span>实时画布对比预览</span>
+            <span id="previewProcessingSpinner" class="hidden inline-flex items-center gap-1 text-xs font-normal text-brand-600">
+              <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+              渲染中...
+            </span>
+          </h2>
+          <p id="currentFileTitle" class="text-xs text-slate-400 truncate max-w-[240px]">未选择图片</p>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <!-- 背景底色切换按钮组 -->
+          <div class="inline-flex rounded-lg bg-slate-100 p-1 border border-slate-200/70" title="切换预览画布背景">
+            <button id="bgModeChecker" onclick="setPreviewBg('checker')" class="px-2 py-1 rounded-md text-xs font-medium bg-white text-slate-800 shadow-sm transition">
+              棋盘格
+            </button>
+            <button id="bgModeWhite" onclick="setPreviewBg('white')" class="px-2 py-1 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition">
+              纯白
+            </button>
+            <button id="bgModeDark" onclick="setPreviewBg('dark')" class="px-2 py-1 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition">
+              深色
+            </button>
+          </div>
+
+          <!-- 视图切换按钮组 -->
+          <div class="inline-flex rounded-lg bg-slate-100 p-1 border border-slate-200/70">
+            <button id="viewModeSplit" onclick="setPreviewMode('split')" class="px-2.5 py-1 rounded-md text-xs font-medium bg-white text-slate-800 shadow-sm transition">
+              滑块对比
+            </button>
+            <button id="viewModeSide" onclick="setPreviewMode('side')" class="px-2.5 py-1 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition">
+              并排对比
+            </button>
+            <button id="viewModeAfter" onclick="setPreviewMode('after')" class="px-2.5 py-1 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition">
+              单图结果
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 核心预览舞台 (带灰白透明棋盘格) -->
+      <div id="previewStageWrapper" class="relative w-full h-[380px] sm:h-[440px] rounded-xl border border-slate-200 checkerboard overflow-hidden flex items-center justify-center select-none transition-colors duration-200">
+
+        <!-- 未选择图片时的引导空状态 -->
+        <div id="previewEmptyState" class="text-center p-6 bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200 shadow-sm max-w-xs">
+          <div class="w-12 h-12 rounded-xl bg-brand-50 text-brand-600 mx-auto flex items-center justify-center mb-3">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+            </svg>
+          </div>
+          <h3 class="text-sm font-semibold text-slate-800">实时透明棋盘格预览区</h3>
+          <p class="text-xs text-slate-500 mt-1">在左侧上传图片后，即可在此处实时拖拽滑块对比圆角裁剪、正圆裁剪与压缩效果。</p>
+        </div>
+
+        <!-- 视图 1：交互式滑块对比视图 (Split Slider) -->
+        <div id="splitViewContainer" class="hidden relative w-full h-full flex items-center justify-center overflow-hidden">
+          <!-- 底层：处理后图片 (After) -->
+          <div class="absolute inset-0 flex items-center justify-center p-4">
+            <img id="splitAfterImg" alt="After" class="max-w-full max-h-full object-contain pointer-events-none transition-all duration-75" />
+          </div>
+          <!-- 顶层：原始图片 (Before) 通过 clip-path 裁剪左侧区域 -->
+          <div id="splitBeforeClipper" class="absolute inset-0 flex items-center justify-center p-4" style="clip-path: inset(0 50% 0 0);">
+            <img id="splitBeforeImg" alt="Before" class="max-w-full max-h-full object-contain pointer-events-none" />
+          </div>
+
+          <!-- 左右角标 -->
+          <span class="absolute top-3 left-3 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-slate-900/75 text-white backdrop-blur-sm pointer-events-none">
+            原始图 (Before)
+          </span>
+          <span class="absolute top-3 right-3 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-brand-600/90 text-white backdrop-blur-sm pointer-events-none">
+            处理后 (After)
+          </span>
+
+          <!-- 可拖拽分割线 -->
+          <div id="splitDivider" class="absolute top-0 bottom-0 w-0.5 bg-white shadow-[0_0_8px_rgba(0,0,0,0.5)] cursor-ew-resize z-20" style="left: 50%;">
+            <div class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-white border-2 border-brand-600 shadow-lg flex items-center justify-center text-brand-600">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 9l-3 3 3 3m8-6l3 3-3 3"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- 视图 2：并排对比视图 (Side-by-Side) -->
+        <div id="sideViewContainer" class="hidden w-full h-full grid grid-cols-2 divide-x divide-slate-300">
+          <div class="relative flex flex-col items-center justify-center p-3 overflow-hidden">
+            <span class="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-900/75 text-white">原始图 (Before)</span>
+            <img id="sideBeforeImg" alt="Before" class="max-w-full max-h-[340px] object-contain" />
+          </div>
+          <div class="relative flex flex-col items-center justify-center p-3 overflow-hidden">
+            <span class="absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-semibold bg-brand-600/90 text-white">处理后 (After)</span>
+            <img id="sideAfterImg" alt="After" class="max-w-full max-h-[340px] object-contain" />
+          </div>
+        </div>
+
+        <!-- 视图 3：仅看结果视图 (After Only) -->
+        <div id="afterViewContainer" class="hidden relative w-full h-full flex items-center justify-center p-4">
+          <span class="absolute top-3 right-3 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-brand-600/90 text-white backdrop-blur-sm">
+            处理后效果 (100% 真实输出 Blob 渲染)
+          </span>
+          <img id="onlyAfterImg" alt="Processed Output" class="max-w-full max-h-full object-contain" />
+        </div>
+      </div>
+
+      <!-- 当前选中图片的详细前后对比指标卡 -->
+      <div id="currentImgMetrics" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 bg-slate-50 p-3 rounded-xl border border-slate-200/80">
+        <div class="bg-white p-2.5 rounded-lg border border-slate-200/60">
+          <div class="text-[11px] text-slate-400">文件大小对比</div>
+          <div id="metricSizeCompare" class="text-xs font-mono font-semibold text-slate-800 mt-1">— → —</div>
+        </div>
+        <div class="bg-white p-2.5 rounded-lg border border-slate-200/60">
+          <div class="text-[11px] text-slate-400">体积变化 / 压缩率</div>
+          <div id="metricCompressionRatio" class="text-xs font-mono font-semibold text-emerald-600 mt-1">—</div>
+        </div>
+        <div class="bg-white p-2.5 rounded-lg border border-slate-200/60">
+          <div class="text-[11px] text-slate-400">分辨率变化</div>
+          <div id="metricDimensionCompare" class="text-xs font-mono font-semibold text-slate-800 mt-1">— → —</div>
+        </div>
+        <div class="bg-white p-2.5 rounded-lg border border-slate-200/60">
+          <div class="text-[11px] text-slate-400">输出格式 & 透明通道</div>
+          <div id="metricFormatAlpha" class="text-xs font-mono font-semibold text-brand-600 mt-1">—</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 右栏：图片处理参数控制面板 (占 3 列) -->
+    <section class="lg:col-span-3 flex flex-col gap-5 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h2 class="font-semibold text-slate-900 text-base">处理参数配置</h2>
+        <button onclick="resetSettings()" class="text-xs text-slate-500 hover:text-brand-600 transition">重置默认</button>
+      </div>
+
+      <!-- 1. 圆角与正圆形处理（核心特性） -->
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-brand-600"></span>
+            1. 圆角与正圆透明裁剪
+          </label>
+          <span class="text-[11px] text-brand-600 font-medium">Alpha=0 透明背景</span>
+        </div>
+
+        <!-- 模式选择三选一 -->
+        <div class="grid grid-cols-3 gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/70">
+          <button id="cornerModeNone" onclick="setCornerMode('none')" class="py-2 px-2 rounded-lg text-xs font-medium transition bg-white text-slate-900 shadow-sm">
+            无圆角
+          </button>
+          <button id="cornerModeRounded" onclick="setCornerMode('rounded')" class="py-2 px-2 rounded-lg text-xs font-medium transition text-slate-600 hover:text-slate-900">
+            自定义圆角
+          </button>
+          <button id="cornerModeCircle" onclick="setCornerMode('circle')" class="py-2 px-2 rounded-lg text-xs font-medium transition text-slate-600 hover:text-slate-900">
+            一键正圆形
+          </button>
+        </div>
+
+        <!-- 自定义圆角详细滑块控制区 -->
+        <div id="roundedControlsPanel" class="hidden bg-slate-50 rounded-xl p-3 border border-slate-200/80 flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-slate-600">圆角单位模式</span>
+            <div class="inline-flex rounded-lg bg-white border border-slate-200 p-0.5">
+              <button id="unitBtnPx" onclick="setCornerUnit('px')" class="px-2.5 py-0.5 rounded-md text-xs font-medium bg-brand-600 text-white transition">像素 (px)</button>
+              <button id="unitBtnPercent" onclick="setCornerUnit('percent')" class="px-2.5 py-0.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition">百分比 (%)</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs text-slate-500">圆角半径大小</span>
+              <div class="flex items-center gap-1">
+                <input id="cornerRadiusNumber" type="number" min="0" max="500" value="48" oninput="syncCornerRadiusFromInput(this.value)" class="w-16 text-right text-xs font-mono font-semibold px-2 py-1 rounded border border-slate-300 focus:outline-none focus:border-brand-500" />
+                <span id="cornerUnitLabel" class="text-xs font-mono text-slate-500">px</span>
+              </div>
+            </div>
+            <input id="cornerRadiusSlider" type="range" min="0" max="500" value="48" oninput="syncCornerRadiusFromSlider(this.value)" class="w-full" />
+            <!-- 快捷预设按钮 -->
+            <div class="flex items-center justify-between gap-1 mt-2">
+              <button onclick="setQuickRadius(16)" class="flex-1 py-1 text-[11px] font-mono bg-white hover:bg-brand-50 border border-slate-200 rounded text-slate-600">16</button>
+              <button onclick="setQuickRadius(32)" class="flex-1 py-1 text-[11px] font-mono bg-white hover:bg-brand-50 border border-slate-200 rounded text-slate-600">32</button>
+              <button onclick="setQuickRadius(64)" class="flex-1 py-1 text-[11px] font-mono bg-white hover:bg-brand-50 border border-slate-200 rounded text-slate-600">64</button>
+              <button onclick="setQuickRadius(120)" class="flex-1 py-1 text-[11px] font-mono bg-white hover:bg-brand-50 border border-slate-200 rounded text-slate-600">120</button>
+              <button onclick="setQuickRadius(250)" class="flex-1 py-1 text-[11px] font-mono bg-white hover:bg-brand-50 border border-slate-200 rounded text-slate-600">250</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 一键正圆形说明区 -->
+        <div id="circleControlsPanel" class="hidden bg-brand-50/70 rounded-xl p-3 border border-brand-200 text-xs text-brand-900">
+          <div class="font-semibold flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-brand-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            自动 1:1 居中正圆裁剪已启用
+          </div>
+          <p class="mt-1 text-brand-700 leading-relaxed">系统将自动按原图最短边 <code class="font-mono">min(W, H)</code> 居中裁剪为正方形，并以半径 <code class="font-mono">R = D/2</code> 绘制全透明外围正圆。</p>
+        </div>
+
+        <!-- 强制锁定 PNG 提示横幅 -->
+        <div id="pngLockNotice" class="hidden bg-amber-50 border border-amber-200/90 rounded-xl p-2.5 flex items-start gap-2 text-xs text-amber-900">
+          <svg class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+          </svg>
+          <div>
+            <span class="font-semibold">已启用圆角/圆形透明裁剪：</span>
+            <span>为保证圆角外部区域 100% 透明，输出格式已自动锁定并设为 <strong>PNG</strong>。</span>
+          </div>
+        </div>
+      </div>
+
+      <hr class="border-slate-100" />
+
+      <!-- 2. 图片压缩与色彩优化 -->
+      <div class="flex flex-col gap-2.5">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            2. 图片压缩质量
+          </label>
+          <span id="qualityValueBadge" class="px-2 py-0.5 text-xs font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md">100%</span>
+        </div>
+
+        <input id="qualitySlider" type="range" min="1" max="100" value="100" oninput="handleQualityChange(this.value)" class="w-full" />
+
+        <div class="flex justify-between text-[11px] text-slate-400">
+          <span>极限高压缩 (1%)</span>
+          <span>平衡推荐 (80%)</span>
+          <span>无损画质 (100%)</span>
+        </div>
+        <p class="text-[11px] text-slate-500 leading-relaxed bg-slate-50 p-2 rounded-lg border border-slate-200/60">
+          💡 <strong>真实压缩引擎：</strong>对 JPG/WEBP 采用原生编码质量控制；对 <strong>PNG</strong> 采用自适应色深阶梯量化（Bit-Depth Quantization）算法，调节滑块即可真实降低 PNG 字节体积。
+        </p>
+      </div>
+
+      <hr class="border-slate-100" />
+
+      <!-- 3. 目标输出格式转换 -->
+      <div class="flex flex-col gap-2.5">
+        <label class="text-xs font-semibold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+          3. 输出格式转换
+        </label>
+
+        <select id="outputFormatSelect" onchange="handleFormatChange(this.value)" class="w-full px-3 py-2 text-xs sm:text-sm font-medium bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-brand-500 disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed">
+          <option value="image/png">PNG — 支持完整透明通道 (圆角必选)</option>
+          <option value="image/jpeg">JPG / JPEG — 适合照片高压缩比</option>
+          <option value="image/webp">WEBP — 现代高压缩比格式</option>
+          <option value="image/bmp">BMP — 24/32-bit 原生位图编码</option>
+          <option value="image/gif">GIF — 静态 GIF89a 调色板编码</option>
+        </select>
+      </div>
+
+      <hr class="border-slate-100" />
+
+      <!-- 4. 尺寸调整 (Resize) -->
+      <div class="flex flex-col gap-3">
+        <label class="text-xs font-semibold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+          4. 尺寸调整 (Resize)
+        </label>
+
+        <div class="grid grid-cols-3 gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/70">
+          <button id="resizeModeOriginal" onclick="setResizeMode('original')" class="py-1.5 px-2 rounded-lg text-xs font-medium bg-white text-slate-900 shadow-sm transition">
+            保持原尺寸
+          </button>
+          <button id="resizeModePercent" onclick="setResizeMode('percent')" class="py-1.5 px-2 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition">
+            按百分比
+          </button>
+          <button id="resizeModeCustom" onclick="setResizeMode('custom')" class="py-1.5 px-2 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition">
+            指定像素
+          </button>
+        </div>
+
+        <!-- 百分比缩放面板 -->
+        <div id="resizePercentPanel" class="hidden bg-slate-50 p-3 rounded-xl border border-slate-200/80">
+          <div class="flex justify-between text-xs mb-1.5">
+            <span class="text-slate-600">缩放比例</span>
+            <span id="resizeScaleLabel" class="font-mono font-semibold text-brand-600">100%</span>
+          </div>
+          <input id="resizeScaleSlider" type="range" min="10" max="200" step="5" value="100" oninput="handleScaleChange(this.value)" class="w-full" />
+          <div class="flex justify-between gap-1 mt-2">
+            <button onclick="setQuickScale(25)" class="flex-1 py-1 text-[11px] font-mono bg-white border border-slate-200 rounded">25%</button>
+            <button onclick="setQuickScale(50)" class="flex-1 py-1 text-[11px] font-mono bg-white border border-slate-200 rounded">50%</button>
+            <button onclick="setQuickScale(75)" class="flex-1 py-1 text-[11px] font-mono bg-white border border-slate-200 rounded">75%</button>
+            <button onclick="setQuickScale(100)" class="flex-1 py-1 text-[11px] font-mono bg-white border border-slate-200 rounded">100%</button>
+            <button onclick="setQuickScale(150)" class="flex-1 py-1 text-[11px] font-mono bg-white border border-slate-200 rounded">150%</button>
+          </div>
+        </div>
+
+        <!-- 指定宽高像素面板 -->
+        <div id="resizeCustomPanel" class="hidden bg-slate-50 p-3 rounded-xl border border-slate-200/80 flex flex-col gap-2.5">
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-[11px] text-slate-500 block mb-1">宽度 (W px)</label>
+              <input id="customWidthInput" type="number" min="1" max="8000" value="800" oninput="handleCustomDimensionInput('w', this.value)" class="w-full px-2.5 py-1.5 text-xs font-mono bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-500 block mb-1">高度 (H px)</label>
+              <input id="customHeightInput" type="number" min="1" max="8000" value="600" oninput="handleCustomDimensionInput('h', this.value)" class="w-full px-2.5 py-1.5 text-xs font-mono bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500" />
+            </div>
+          </div>
+          <label class="inline-flex items-center gap-2 text-xs text-slate-700 cursor-pointer select-none">
+            <input id="lockAspectCheckbox" type="checkbox" checked onchange="handleLockAspectChange(this.checked)" class="rounded text-brand-600 focus:ring-brand-500" />
+            <span>锁定原始宽高比例</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 立即批量重新处理按钮 -->
+      <button onclick="processAllImages(true)" class="mt-1 w-full py-2.5 px-4 rounded-xl font-semibold text-xs sm:text-sm text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 transition flex items-center justify-center gap-1.5">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+        <span>批量应用参数至全部图片</span>
+      </button>
+    </section>
+
+  </main>
+
+  <!-- 核心业务逻辑脚本 -->
+  <script>
+    /*************************************************************************
+     * 1. 全局状态管理 (State Management)
+     *************************************************************************/
+    const state = {
+      images: [],           // 队列中的图片对象列表
+      selectedId: null,     // 当前在主预览区选中的图片 ID
+      previewMode: 'split', // 'split' | 'side' | 'after'
+      previewBg: 'checker', // 'checker' | 'white' | 'dark'
+      settings: {
+        cornerMode: 'rounded',   // 'none' | 'rounded' | 'circle' (默认开启圆角方便直观体验)
+        cornerUnit: 'px',        // 'px' | 'percent'
+        cornerRadius: 48,        // px (0-500) 或 % (0-50)
+        quality: 100,             // 1 - 100
+        outputFormat: 'image/png',
+        userPreferredFormat: 'image/png', // 当关闭圆角时恢复用户上次选中的格式
+        resizeMode: 'original',  // 'original' | 'percent' | 'custom'
+        resizeScale: 100,        // 10 - 200 (%)
+        customWidth: 800,
+        customHeight: 600,
+        lockAspect: true
+      }
+    };
+
+    let debounceTimer = null;
+
+    /*************************************************************************
+     * 2. 工具函数：格式化文件大小、格式名称与 Toast 通知
+     *************************************************************************/
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function mimeToExt(mime) {
+      const map = {
+        'image/png': 'PNG',
+        'image/jpeg': 'JPG',
+        'image/jpg': 'JPG',
+        'image/webp': 'WEBP',
+        'image/bmp': 'BMP',
+        'image/gif': 'GIF'
+      };
+      return map[mime.toLowerCase()] || 'PNG';
+    }
+
+    function mimeToFileExtension(mime) {
+      const map = {
+        'image/png': 'png',
+        'image/jpeg': 'jpg',
+        'image/webp': 'webp',
+        'image/bmp': 'bmp',
+        'image/gif': 'gif'
+      };
+      return map[mime.toLowerCase()] || 'png';
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const el = document.createElement('div');
+      const colorMap = {
+        info: 'bg-slate-900 text-white border-slate-700',
+        success: 'bg-emerald-600 text-white border-emerald-500',
+        warning: 'bg-amber-500 text-white border-amber-400',
+        error: 'bg-rose-600 text-white border-rose-500'
+      };
+      el.className = `pointer-events-auto px-4 py-2.5 rounded-xl border shadow-lg text-xs sm:text-sm font-medium flex items-center gap-2 transition-all duration-300 ${colorMap[type] || colorMap.info}`;
+      el.innerHTML = `<span>${message}</span>`;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(-8px)';
+        setTimeout(() => el.remove(), 300);
+      }, 2800);
+    }
+
+    /*************************************************************************
+     * 3. 内置真实二进制编码器 (BMP 32-bit 编码器 & GIF89a 编码器 & 纯 JS ZIP 回退)
+     *************************************************************************/
+    /**
+     * 将 Canvas ImageData 编码为真实的 32-bit BGRA BMP 二进制 Blob
+     */
+    function encodeBMPFromImageData(imageData) {
+      const width = imageData.width;
+      const height = imageData.height;
+      const pixels = imageData.data;
+      const fileHeaderSize = 14;
+      const infoHeaderSize = 40;
+      const pixelDataSize = width * height * 4;
+      const fileSize = fileHeaderSize + infoHeaderSize + pixelDataSize;
+
+      const buffer = new ArrayBuffer(fileSize);
+      const view = new DataView(buffer);
+
+      // BITMAPFILEHEADER (14 bytes)
+      view.setUint8(0, 0x42); // 'B'
+      view.setUint8(1, 0x4D); // 'M'
+      view.setUint32(2, fileSize, true);
+      view.setUint32(6, 0, true);
+      view.setUint32(10, fileHeaderSize + infoHeaderSize, true);
+
+      // BITMAPINFOHEADER (40 bytes)
+      view.setUint32(14, infoHeaderSize, true);
+      view.setInt32(18, width, true);
+      view.setInt32(22, -height, true); // Top-down DIB
+      view.setUint16(26, 1, true);      // Planes
+      view.setUint16(28, 32, true);     // 32-bit BGRA
+      view.setUint32(30, 0, true);      // BI_RGB
+      view.setUint32(34, pixelDataSize, true);
+      view.setInt32(38, 2835, true);    // 72 DPI
+      view.setInt32(42, 2835, true);
+      view.setUint32(46, 0, true);
+      view.setUint32(50, 0, true);
+
+      let offset = 54;
+      for (let i = 0; i < pixels.length; i += 4) {
+        view.setUint8(offset, pixels[i + 2]);     // B
+        view.setUint8(offset + 1, pixels[i + 1]); // G
+        view.setUint8(offset + 2, pixels[i]);     // R
+        view.setUint8(offset + 3, pixels[i + 3]); // A
+        offset += 4;
+      }
+
+      return new Blob([buffer], { type: 'image/bmp' });
+    }
+
+    /**
+     * 将 Canvas ImageData 编码为真实可打开的静态 GIF89a (256色调色板 + LZW 编码)
+     */
+    function encodeGIF89aFromImageData(imageData) {
+      const width = imageData.width;
+      const height = imageData.height;
+      const data = imageData.data;
+
+      const bytes = [];
+      const writeByte = (b) => bytes.push(b & 0xff);
+      const writeShort = (s) => {
+        bytes.push(s & 0xff);
+        bytes.push((s >> 8) & 0xff);
+      };
+      const writeString = (str) => {
+        for (let i = 0; i < str.length; i++) bytes.push(str.charCodeAt(i));
+      };
+
+      // 1. Header: GIF89a
+      writeString('GIF89a');
+      writeShort(width);
+      writeShort(height);
+      writeByte(0xf7); // Global Color Table Flag (1) | Color Res (7) | Sort (0) | Size of GCT (7 -> 256 colors)
+      writeByte(255);  // Background color index (255 reserved for transparent)
+      writeByte(0);    // Pixel aspect ratio
+
+      // 2. 构建 256 色调色板 (6x6x6 Web 安全色立方 = 216 色，索引 255 设为透明色)
+      for (let i = 0; i < 256; i++) {
+        if (i < 216) {
+          const r = Math.floor(i / 36) * 51;
+          const g = (Math.floor(i / 6) % 6) * 51;
+          const b = (i % 6) * 51;
+          writeByte(r);
+          writeByte(g);
+          writeByte(b);
+        } else {
+          writeByte(0);
+          writeByte(0);
+          writeByte(0);
+        }
+      }
+
+      // 3. Graphics Control Extension (支持透明通道索引 255)
+      writeByte(0x21);
+      writeByte(0xf9);
+      writeByte(0x04);
+      writeByte(0x01); // Transparent color flag enabled
+      writeShort(0);   // Delay
+      writeByte(255);  // Transparent color index
+      writeByte(0x00);
+
+      // 4. Image Descriptor
+      writeByte(0x2c);
+      writeShort(0);
+      writeShort(0);
+      writeShort(width);
+      writeShort(height);
+      writeByte(0x00);
+
+      // 5. 将每个像素映射到 0..215 或 255 (透明)
+      const indexedPixels = new Uint8Array(width * height);
+      for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+        const a = data[i + 3];
+        if (a < 128) {
+          indexedPixels[p] = 255;
+        } else {
+          const rIdx = Math.round((data[i] / 255) * 5);
+          const gIdx = Math.round((data[i + 1] / 255) * 5);
+          const bIdx = Math.round((data[i + 2] / 255) * 5);
+          indexedPixels[p] = rIdx * 36 + gIdx * 6 + bIdx;
+        }
+      }
+
+      // 6. 标准 GIF LZW 压缩编码
+      const minCodeSize = 8;
+      writeByte(minCodeSize);
+
+      const clearCode = 1 << minCodeSize;
+      const eoiCode = clearCode + 1;
+      let codeSize = minCodeSize + 1;
+      let nextCode = eoiCode + 1;
+
+      const subBlock = [];
+      let bitBuffer = 0;
+      let bitCount = 0;
+
+      const flushSubBlock = () => {
+        if (subBlock.length > 0) {
+          writeByte(subBlock.length);
+          for (let i = 0; i < subBlock.length; i++) writeByte(subBlock[i]);
+          subBlock.length = 0;
+        }
+      };
+
+      const writeCode = (code) => {
+        bitBuffer |= (code << bitCount);
+        bitCount += codeSize;
+        while (bitCount >= 8) {
+          subBlock.push(bitBuffer & 0xff);
+          if (subBlock.length === 255) flushSubBlock();
+          bitBuffer >>= 8;
+          bitCount -= 8;
+        }
+      };
+
+      let dict = new Map();
+      writeCode(clearCode);
+
+      if (indexedPixels.length > 0) {
+        let prefix = indexedPixels[0];
+        for (let i = 1; i < indexedPixels.length; i++) {
+          const k = indexedPixels[i];
+          const key = (prefix << 8) | k;
+          if (dict.has(key)) {
+            prefix = dict.get(key);
+          } else {
+            writeCode(prefix);
+            if (nextCode < 4096) {
+              dict.set(key, nextCode++);
+              if (nextCode === (1 << codeSize) && codeSize < 12) {
+                codeSize++;
+              }
+            } else {
+              writeCode(clearCode);
+              dict.clear();
+              codeSize = minCodeSize + 1;
+              nextCode = eoiCode + 1;
+            }
+            prefix = k;
+          }
+        }
+        writeCode(prefix);
+      }
+
+      writeCode(eoiCode);
+      if (bitCount > 0) {
+        subBlock.push(bitBuffer & 0xff);
+      }
+      flushSubBlock();
+      writeByte(0x00); // Block Terminator
+      writeByte(0x3b); // GIF Trailer
+
+      return new Blob([new Uint8Array(bytes)], { type: 'image/gif' });
+    }
+
+    /**
+     * 内置纯 JS 零依赖 ZIP 打包生成器 (当 CDN 离线时作为 100% 兜底保障)
+     */
+    function createFallbackZipBlob(files) {
+      // files: [{ name: string, data: Uint8Array }]
+      const crcTable = new Uint32Array(256);
+      for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) {
+          c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        }
+        crcTable[n] = c;
+      }
+      const crc32 = (buf) => {
+        let c = 0xffffffff;
+        for (let i = 0; i < buf.length; i++) {
+          c = crcTable[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+        }
+        return (c ^ 0xffffffff) >>> 0;
+      };
+
+      const encoder = new TextEncoder();
+      const localChunks = [];
+      const centralChunks = [];
+      let offset = 0;
+
+      for (const file of files) {
+        const nameBytes = encoder.encode(file.name);
+        const data = file.data;
+        const crc = crc32(data);
+
+        // Local file header (30 bytes + name)
+        const localHeader = new ArrayBuffer(30 + nameBytes.length);
+        const lv = new DataView(localHeader);
+        lv.setUint32(0, 0x04034b50, true);
+        lv.setUint16(4, 20, true);
+        lv.setUint16(6, 0x0800, true); // UTF-8 flag
+        lv.setUint16(8, 0, true);      // Store method
+        lv.setUint16(10, 0, true);
+        lv.setUint16(12, 0, true);
+        lv.setUint32(14, crc, true);
+        lv.setUint32(18, data.length, true);
+        lv.setUint32(22, data.length, true);
+        lv.setUint16(26, nameBytes.length, true);
+        lv.setUint16(28, 0, true);
+        new Uint8Array(localHeader, 30).set(nameBytes);
+
+        localChunks.push(new Uint8Array(localHeader), data);
+
+        // Central directory header (46 bytes + name)
+        const centralHeader = new ArrayBuffer(46 + nameBytes.length);
+        const cv = new DataView(centralHeader);
+        cv.setUint32(0, 0x02014b50, true);
+        cv.setUint16(4, 20, true);
+        cv.setUint16(6, 20, true);
+        cv.setUint16(8, 0x0800, true);
+        cv.setUint16(10, 0, true);
+        cv.setUint16(12, 0, true);
+        cv.setUint16(14, 0, true);
+        cv.setUint32(16, crc, true);
+        cv.setUint32(20, data.length, true);
+        cv.setUint32(24, data.length, true);
+        cv.setUint16(28, nameBytes.length, true);
+        cv.setUint16(30, 0, true);
+        cv.setUint16(32, 0, true);
+        cv.setUint16(34, 0, true);
+        cv.setUint16(36, 0, true);
+        cv.setUint32(38, 0, true);
+        cv.setUint32(42, offset, true);
+        new Uint8Array(centralHeader, 46).set(nameBytes);
+
+        centralChunks.push(new Uint8Array(centralHeader));
+        offset += localHeader.byteLength + data.length;
+      }
+
+      let centralSize = 0;
+      for (const ch of centralChunks) centralSize += ch.length;
+
+      const eocd = new ArrayBuffer(22);
+      const ev = new DataView(eocd);
+      ev.setUint32(0, 0x06054b50, true);
+      ev.setUint16(4, 0, true);
+      ev.setUint16(6, 0, true);
+      ev.setUint16(8, files.length, true);
+      ev.setUint16(10, files.length, true);
+      ev.setUint32(12, centralSize, true);
+      ev.setUint32(16, offset, true);
+      ev.setUint16(20, 0, true);
+
+      return new Blob([...localChunks, ...centralChunks, new Uint8Array(eocd)], { type: 'application/zip' });
+    }
+
+    /*************************************************************************
+     * 4. 核心 Canvas 圆角裁剪、尺寸缩放与 PNG 色彩量化压缩管线
+     *************************************************************************/
+    /**
+     * 在 Canvas 上绘制带圆角的闭合裁剪路径 (兼容所有浏览器的贝塞尔圆角路径)
+     */
+    function traceRoundedRectPath(ctx, x, y, width, height, radius) {
+      const maxRadius = Math.min(width, height) / 2;
+      const r = Math.max(0, Math.min(radius, maxRadius));
+      ctx.beginPath();
+      if (r === 0) {
+        ctx.rect(x, y, width, height);
+      } else {
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + width - r, y);
+        ctx.arcTo(x + width, y, x + width, y + r, r);
+        ctx.lineTo(x + width, y + height - r);
+        ctx.arcTo(x + width, y + height, x + width - r, y + height, r);
+        ctx.lineTo(x + r, y + height);
+        ctx.arcTo(x, y + height, x, y + height - r, r);
+        ctx.lineTo(x, y + r);
+        ctx.arcTo(x, y, x + r, y, r);
+      }
+      ctx.closePath();
+    }
+
+    /**
+     * 判断当前参数是否启用了需要透明通道的圆角或正圆形裁剪
+     */
+    function isTransparencyRequired() {
+      if (state.settings.cornerMode === 'circle') return true;
+      if (state.settings.cornerMode === 'rounded' && state.settings.cornerRadius > 0) return true;
+      return false;
+    }
+
+    /**
+     * 核心单图处理函数：接收图片项 item，根据当前 state.settings 生成真实 Output Blob
+     */
+    async function processSingleImageItem(item) {
+      const { cornerMode, cornerUnit, cornerRadius, quality, resizeMode, resizeScale, customWidth, customHeight } = state.settings;
+      const forcePng = isTransparencyRequired();
+      const targetMime = forcePng ? 'image/png' : state.settings.outputFormat;
+
+      const srcImg = item.imgElement;
+      const origW = item.origWidth;
+      const origH = item.origHeight;
+
+      // 第一步：计算源图裁剪区域 (正圆模式下按短边 1:1 居中裁剪)
+      let sx = 0, sy = 0, sw = origW, sh = origH;
+      if (cornerMode === 'circle') {
+        const minSide = Math.min(origW, origH);
+        sx = Math.floor((origW - minSide) / 2);
+        sy = Math.floor((origH - minSide) / 2);
+        sw = minSide;
+        sh = minSide;
+      }
+
+      // 第二步：计算目标输出尺寸 (outW, outH)
+      let outW = sw;
+      let outH = sh;
+      if (resizeMode === 'percent') {
+        const factor = Math.max(0.05, resizeScale / 100);
+        outW = Math.max(1, Math.round(sw * factor));
+        outH = Math.max(1, Math.round(sh * factor));
+      } else if (resizeMode === 'custom') {
+        if (cornerMode === 'circle') {
+          const d = Math.max(1, parseInt(customWidth, 10) || sw);
+          outW = d;
+          outH = d;
+        } else {
+          outW = Math.max(1, parseInt(customWidth, 10) || sw);
+          outH = Math.max(1, parseInt(customHeight, 10) || sh);
+        }
+      }
+
+      // 第三步：创建离屏 Canvas 并清空为 100% 透明像素 (RGBA = 0,0,0,0)
+      const canvas = document.createElement('canvas');
+      canvas.width = outW;
+      canvas.height = outH;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.clearRect(0, 0, outW, outH);
+
+      // 如果目标格式是不支持透明的 JPEG，并且没有开启圆角，则填充白色基底防止黑底
+      if (targetMime === 'image/jpeg' && !forcePng) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, outW, outH);
+      }
+
+      // 第四步：应用圆角或正圆路径裁剪 (Clip)
+      ctx.save();
+      if (cornerMode === 'circle') {
+        const r = Math.min(outW, outH) / 2;
+        ctx.beginPath();
+        ctx.arc(outW / 2, outH / 2, r, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+      } else if (cornerMode === 'rounded' && cornerRadius > 0) {
+        let rPx = cornerRadius;
+        if (cornerUnit === 'percent') {
+          rPx = (Math.min(outW, outH) * Math.min(50, cornerRadius)) / 100;
+        }
+        traceRoundedRectPath(ctx, 0, 0, outW, outH, rPx);
+        ctx.clip();
+      }
+
+      // 高质量平滑插值绘制图像
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(srcImg, sx, sy, sw, sh, 0, 0, outW, outH);
+      ctx.restore();
+
+      // 第五步：当输出为 PNG/BMP/GIF 且压缩质量 < 100% 时，执行色彩阶梯量化以实现真实的 PNG 字节压缩
+      if ((targetMime === 'image/png' || targetMime === 'image/bmp') && quality < 100) {
+        const imgData = ctx.getImageData(0, 0, outW, outH);
+        const data = imgData.data;
+        // 根据质量 (1..99) 计算量化步长 step (2..64)
+        const step = Math.max(2, Math.round(((100 - quality) / 100) * 56) + 2);
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i + 3] === 0) {
+            // 完全透明像素清零 RGB 以最大化 DEFLATE 连续零游程压缩率
+            data[i] = 0;
+            data[i + 1] = 0;
+            data[i + 2] = 0;
+          } else {
+            data[i] = Math.min(255, Math.round(data[i] / step) * step);
+            data[i + 1] = Math.min(255, Math.round(data[i + 1] / step) * step);
+            data[i + 2] = Math.min(255, Math.round(data[i + 2] / step) * step);
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
+      }
+
+      // 第六步：导出对应格式的真实二进制 Blob
+      let outBlob = null;
+      if (targetMime === 'image/bmp') {
+        const imgData = ctx.getImageData(0, 0, outW, outH);
+        outBlob = encodeBMPFromImageData(imgData);
+      } else if (targetMime === 'image/gif') {
+        const imgData = ctx.getImageData(0, 0, outW, outH);
+        outBlob = encodeGIF89aFromImageData(imgData);
+      } else {
+        const q = Math.max(0.01, Math.min(1, quality / 100));
+        outBlob = await new Promise((resolve) => {
+          canvas.toBlob((blob) => resolve(blob), targetMime, q);
+        });
+      }
+
+      // 释放旧的 ObjectURL
+      if (item.outUrl) {
+        URL.revokeObjectURL(item.outUrl);
+      }
+
+      item.outBlob = outBlob;
+      item.outUrl = URL.createObjectURL(outBlob);
+      item.outSize = outBlob.size;
+      item.outWidth = outW;
+      item.outHeight = outH;
+      item.outMime = targetMime;
+    }
+
+    /*************************************************************************
+     * 5. 批量处理调度与 UI 渲染更新
+     *************************************************************************/
+    async function processAllImages(showNotification = false) {
+      if (state.images.length === 0) return;
+
+      const spinner = document.getElementById('previewProcessingSpinner');
+      spinner.classList.remove('hidden');
+
+      try {
+        for (const item of state.images) {
+          await processSingleImageItem(item);
+        }
+        renderImageQueueList();
+        renderActivePreview();
+        updateBatchStats();
+        if (showNotification) {
+          showToast(`已完成全部 ${state.images.length} 张图片的批处理渲染！`, 'success');
+        }
+      } catch (err) {
+        console.error('图片处理异常:', err);
+        showToast('处理图片时发生异常，请检查文件格式', 'error');
+      } finally {
+        spinner.classList.add('hidden');
+      }
+    }
+
+    function scheduleProcessAll() {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        processAllImages(false);
+      }, 90);
+    }
+
+    /*************************************************************************
+     * 6. 文件上传、拖拽监听与程序化生成 3 张高清示例图片
+     *************************************************************************/
+    function initDragAndDrop() {
+      const dropZone = document.getElementById('dropZone');
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evtName => {
+        dropZone.addEventListener(evtName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+      });
+      ['dragenter', 'dragover'].forEach(evtName => {
+        dropZone.addEventListener(evtName, () => {
+          dropZone.classList.add('border-brand-500', 'bg-brand-50/50');
+        });
+      });
+      ['dragleave', 'drop'].forEach(evtName => {
+        dropZone.addEventListener(evtName, () => {
+          dropZone.classList.remove('border-brand-500', 'bg-brand-50/50');
+        });
+      });
+      dropZone.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+          ingestFiles(Array.from(files));
+        }
+      });
+    }
+
+    function handleFileSelect(event) {
+      const files = event.target.files;
+      if (files && files.length > 0) {
+        ingestFiles(Array.from(files));
+      }
+      event.target.value = '';
+    }
+
+    async function ingestFiles(fileArray) {
+      const validFiles = fileArray.filter(f => f.type.startsWith('image/') || /\.(png|jpe?g|gif|bmp|webp)$/i.test(f.name));
+      if (validFiles.length === 0) {
+        showToast('请选择有效的图片文件 (PNG, JPG, GIF, BMP, WEBP)', 'warning');
+        return;
+      }
+
+      for (const file of validFiles) {
+        try {
+          const origUrl = URL.createObjectURL(file);
+          const img = await loadImageElement(origUrl);
+          const id = 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+          const item = {
+            id,
+            file,
+            name: file.name,
+            origMime: file.type || 'image/png',
+            origSize: file.size,
+            origWidth: img.naturalWidth || img.width,
+            origHeight: img.naturalHeight || img.height,
+            origUrl,
+            imgElement: img,
+            outBlob: null,
+            outUrl: null,
+            outSize: 0,
+            outWidth: img.naturalWidth || img.width,
+            outHeight: img.naturalHeight || img.height,
+            outMime: 'image/png'
+          };
+          state.images.push(item);
+          if (!state.selectedId) {
+            state.selectedId = item.id;
+            syncCustomDimensionInputsToSelected();
+          }
+        } catch (e) {
+          console.error('加载图片失败:', file.name, e);
+        }
+      }
+
+      enforcePngRuleUI();
+      await processAllImages(false);
+      showToast(`已成功导入 ${validFiles.length} 张图片并完成实时处理`, 'success');
+    }
+
+    function loadImageElement(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = (err) => reject(err);
+        img.src = url;
+      });
+    }
+
+    /*************************************************************************
+     * 7. 渲染左侧图片列表与单图操作（选择、单张下载、单张删除、清空）
+     *************************************************************************/
+    function renderImageQueueList() {
+      const container = document.getElementById('imageListContainer');
+      const emptyState = document.getElementById('emptyQueueState');
+      const countBadge = document.getElementById('queueCountBadge');
+      const btnClear = document.getElementById('btnClearAll');
+      const btnZip = document.getElementById('btnDownloadZip');
+
+      countBadge.textContent = `${state.images.length} 张`;
+      btnClear.disabled = state.images.length === 0;
+      btnZip.disabled = state.images.length === 0;
+
+      // 清理除 emptyState 外的节点
+      Array.from(container.children).forEach(child => {
+        if (child.id !== 'emptyQueueState') child.remove();
+      });
+
+      if (state.images.length === 0) {
+        emptyState.classList.remove('hidden');
+        document.getElementById('batchStatsBar').classList.add('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      document.getElementById('batchStatsBar').classList.remove('hidden');
+
+      state.images.forEach((item) => {
+        const isSelected = item.id === state.selectedId;
+        const diffRatio = item.origSize > 0 ? (((item.outSize - item.origSize) / item.origSize) * 100).toFixed(1) : '0.0';
+        const isSmaller = item.outSize <= item.origSize;
+        const ratioText = isSmaller ? `${diffRatio}%` : `+${diffRatio}%`;
+        const ratioBadgeClass = isSmaller
+          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+          : 'bg-amber-50 text-amber-700 border-amber-200';
+
+        const card = document.createElement('div');
+        card.className = `group relative rounded-xl p-2.5 border transition cursor-pointer flex items-center gap-3 ${
+          isSelected
+            ? 'bg-brand-50/60 border-brand-500 ring-2 ring-brand-500/20'
+            : 'bg-white hover:bg-slate-50 border-slate-200'
+        }`;
+        card.onclick = () => selectImageById(item.id);
+
+        card.innerHTML = `
+          <!-- 缩略图 (带棋盘格背景直观呈现圆角) -->
+          <div class="w-14 h-14 rounded-lg checkerboard-sm border border-slate-200 shrink-0 flex items-center justify-center overflow-hidden p-0.5">
+            <img src="${item.outUrl || item.origUrl}" alt="${item.name}" class="max-w-full max-h-full object-contain" />
+          </div>
+
+          <!-- 详细元数据对比 -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-1">
+              <p class="text-xs font-semibold text-slate-800 truncate" title="${item.name}">${item.name}</p>
+              <span class="px-1.5 py-0.5 text-[10px] font-mono font-semibold border rounded ${ratioBadgeClass}">${ratioText}</span>
+            </div>
+
+            <!-- 原始信息 -> 处理后信息 -->
+            <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-mono text-slate-500">
+              <span>${mimeToExt(item.origMime)} → <strong class="text-brand-600">${mimeToExt(item.outMime)}</strong></span>
+              <span>·</span>
+              <span>${item.origWidth}×${item.origHeight} → <strong class="text-slate-700">${item.outWidth}×${item.outHeight}</strong></span>
+            </div>
+
+            <div class="mt-0.5 flex items-center justify-between text-[11px] font-mono">
+              <span class="text-slate-400">${formatBytes(item.origSize)} → <strong class="text-slate-800">${formatBytes(item.outSize)}</strong></span>
+              <div class="flex items-center gap-1" onclick="event.stopPropagation()">
+                <button onclick="resetSingleImage('${item.id}')" title="重置此图为原图无损状态" class="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 font-sans font-medium text-[11px] transition">
+                  重置
+                </button>
+                <button onclick="downloadSingleImage('${item.id}')" title="下载此图" class="px-2 py-0.5 rounded bg-brand-50 hover:bg-brand-100 text-brand-700 font-sans font-medium text-[11px] transition">
+                  下载
+                </button>
+                <button onclick="removeSingleImage('${item.id}')" title="移除此图" class="p-1 rounded hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function updateBatchStats() {
+      let totalOrig = 0;
+      let totalOut = 0;
+      state.images.forEach(img => {
+        totalOrig += img.origSize;
+        totalOut += img.outSize;
+      });
+      document.getElementById('statTotalOrig').textContent = formatBytes(totalOrig);
+      document.getElementById('statTotalOut').textContent = formatBytes(totalOut);
+      if (totalOrig > 0) {
+        const pct = (((totalOut - totalOrig) / totalOrig) * 100).toFixed(1);
+        const el = document.getElementById('statTotalRatio');
+        el.textContent = (totalOut <= totalOrig ? `${pct}%` : `+${pct}%`);
+        el.className = `text-xs font-mono font-semibold mt-0.5 ${totalOut <= totalOrig ? 'text-emerald-600' : 'text-amber-600'}`;
+      }
+    }
+
+    function selectImageById(id) {
+      state.selectedId = id;
+      syncCustomDimensionInputsToSelected();
+      renderImageQueueList();
+      renderActivePreview();
+    }
+
+    /**
+     * 单张图片重置：将该图片恢复为原始尺寸、无圆角、原始格式的状态
+     */
+    function resetSingleImage(id) {
+      const item = state.images.find(i => i.id === id);
+      if (!item) return;
+      if (item.outUrl) URL.revokeObjectURL(item.outUrl);
+      item.outBlob = item.file;
+      item.outUrl = URL.createObjectURL(item.file);
+      item.outSize = item.origSize;
+      item.outWidth = item.origWidth;
+      item.outHeight = item.origHeight;
+      item.outMime = item.origMime || 'image/png';
+      item.isReset = true;
+
+      state.selectedId = item.id;
+      renderImageQueueList();
+      renderActivePreview();
+      updateBatchStats();
+      showToast(`已将「${item.name}」重置为原始未裁剪状态`, 'info');
+    }
+
+    function removeSingleImage(id) {
+      const idx = state.images.findIndex(i => i.id === id);
+      if (idx === -1) return;
+      const removed = state.images[idx];
+      if (removed.origUrl) URL.revokeObjectURL(removed.origUrl);
+      if (removed.outUrl) URL.revokeObjectURL(removed.outUrl);
+      state.images.splice(idx, 1);
+
+      if (state.selectedId === id) {
+        state.selectedId = state.images.length > 0 ? state.images[0].id : null;
+      }
+      renderImageQueueList();
+      renderActivePreview();
+      updateBatchStats();
+    }
+
+    function clearAllImages() {
+      state.images.forEach(item => {
+        if (item.origUrl) URL.revokeObjectURL(item.origUrl);
+        if (item.outUrl) URL.revokeObjectURL(item.outUrl);
+      });
+      state.images = [];
+      state.selectedId = null;
+      renderImageQueueList();
+      renderActivePreview();
+      showToast('已清空图片列表', 'info');
+    }
+
+    function getOutputFileName(item) {
+      const baseName = item.name.replace(/\.[^/.]+$/, '');
+      const ext = mimeToFileExtension(item.outMime);
+      if (item.isReset) {
+        return `${baseName}_original.${ext}`;
+      }
+      const suffix = state.settings.cornerMode === 'circle'
+        ? '_circle'
+        : (state.settings.cornerMode === 'rounded' && state.settings.cornerRadius > 0 ? `_r${state.settings.cornerRadius}` : '_processed');
+      return `${baseName}${suffix}.${ext}`;
+    }
+
+    function downloadSingleImage(id) {
+      const item = state.images.find(i => i.id === id);
+      if (!item || !item.outBlob) return;
+      const a = document.createElement('a');
+      a.href = item.outUrl;
+      a.download = getOutputFileName(item);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast(`已触发下载：${a.download}`, 'success');
+    }
+
+    /*************************************************************************
+     * 8. 主工作区：前后对比预览 (Split Slider / Side-by-Side / After Only) 及背景切换
+     *************************************************************************/
+    function setPreviewBg(bgMode) {
+      state.previewBg = bgMode;
+      const stage = document.getElementById('previewStageWrapper');
+      stage.classList.remove('checkerboard', 'bg-white', 'bg-slate-900');
+      if (bgMode === 'checker') {
+        stage.classList.add('checkerboard');
+      } else if (bgMode === 'white') {
+        stage.classList.add('bg-white');
+      } else if (bgMode === 'dark') {
+        stage.classList.add('bg-slate-900');
+      }
+
+      const btnMap = {
+        checker: 'bgModeChecker',
+        white: 'bgModeWhite',
+        dark: 'bgModeDark'
+      };
+      Object.entries(btnMap).forEach(([k, id]) => {
+        const btn = document.getElementById(id);
+        if (k === bgMode) {
+          btn.className = 'px-2 py-1 rounded-md text-xs font-medium bg-white text-slate-800 shadow-sm transition';
+        } else {
+          btn.className = 'px-2 py-1 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition';
+        }
+      });
+    }
+
+    function setPreviewMode(mode) {
+      state.previewMode = mode;
+      const modes = ['split', 'side', 'after'];
+      modes.forEach(m => {
+        const btn = document.getElementById('viewMode' + m.charAt(0).toUpperCase() + m.slice(1));
+        if (m === mode) {
+          btn.className = 'px-2.5 py-1 rounded-md text-xs font-medium bg-white text-slate-800 shadow-sm transition';
+        } else {
+          btn.className = 'px-2.5 py-1 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition';
+        }
+      });
+      renderActivePreview();
+    }
+
+    function renderActivePreview() {
+      const emptyEl = document.getElementById('previewEmptyState');
+      const splitEl = document.getElementById('splitViewContainer');
+      const sideEl = document.getElementById('sideViewContainer');
+      const afterEl = document.getElementById('afterViewContainer');
+      const titleEl = document.getElementById('currentFileTitle');
+
+      const item = state.images.find(i => i.id === state.selectedId);
+      if (!item) {
+        emptyEl.classList.remove('hidden');
+        splitEl.classList.add('hidden');
+        sideEl.classList.add('hidden');
+        afterEl.classList.add('hidden');
+        titleEl.textContent = '未选择图片';
+        document.getElementById('metricSizeCompare').textContent = '— → —';
+        document.getElementById('metricCompressionRatio').textContent = '—';
+        document.getElementById('metricDimensionCompare').textContent = '— → —';
+        document.getElementById('metricFormatAlpha').textContent = '—';
+        return;
+      }
+
+      emptyEl.classList.add('hidden');
+      titleEl.textContent = `${item.name} → ${getOutputFileName(item)}`;
+
+      // 更新图片源
+      document.getElementById('splitBeforeImg').src = item.origUrl;
+      document.getElementById('splitAfterImg').src = item.outUrl || item.origUrl;
+      document.getElementById('sideBeforeImg').src = item.origUrl;
+      document.getElementById('sideAfterImg').src = item.outUrl || item.origUrl;
+      document.getElementById('onlyAfterImg').src = item.outUrl || item.origUrl;
+
+      splitEl.classList.toggle('hidden', state.previewMode !== 'split');
+      sideEl.classList.toggle('hidden', state.previewMode !== 'side');
+      afterEl.classList.toggle('hidden', state.previewMode !== 'after');
+
+      // 更新底部 4 项实时指标
+      document.getElementById('metricSizeCompare').textContent = `${formatBytes(item.origSize)} → ${formatBytes(item.outSize)}`;
+      const diffPct = item.origSize > 0 ? (((item.outSize - item.origSize) / item.origSize) * 100).toFixed(1) : '0.0';
+      const compEl = document.getElementById('metricCompressionRatio');
+      if (item.outSize <= item.origSize) {
+        compEl.textContent = `${diffPct}% (节省 ${formatBytes(item.origSize - item.outSize)})`;
+        compEl.className = 'text-xs font-mono font-semibold text-emerald-600 mt-1';
+      } else {
+        compEl.textContent = `+${diffPct}% (无损透明通道)`;
+        compEl.className = 'text-xs font-mono font-semibold text-amber-600 mt-1';
+      }
+
+      document.getElementById('metricDimensionCompare').textContent = `${item.origWidth}×${item.origHeight} → ${item.outWidth}×${item.outHeight}`;
+      const alphaText = isTransparencyRequired() ? 'PNG (透明圆角已启用)' : mimeToExt(item.outMime);
+      document.getElementById('metricFormatAlpha').textContent = alphaText;
+    }
+
+    /**
+     * 初始化前后对比滑块拖拽交互 (支持鼠标拖动与移动端触摸滑动)
+     */
+    function initSplitSliderInteraction() {
+      const container = document.getElementById('splitViewContainer');
+      const clipper = document.getElementById('splitBeforeClipper');
+      const divider = document.getElementById('splitDivider');
+      let isDragging = false;
+
+      const updateSliderPosition = (clientX) => {
+        const rect = container.getBoundingClientRect();
+        if (rect.width <= 0) return;
+        let pct = ((clientX - rect.left) / rect.width) * 100;
+        pct = Math.max(2, Math.min(98, pct));
+        divider.style.left = `${pct}%`;
+        clipper.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
+      };
+
+      container.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        updateSliderPosition(e.clientX);
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        updateSliderPosition(e.clientX);
+      });
+      window.addEventListener('mouseup', () => {
+        isDragging = false;
+      });
+
+      container.addEventListener('touchstart', (e) => {
+        if (e.touches.length > 0) {
+          isDragging = true;
+          updateSliderPosition(e.touches[0].clientX);
+        }
+      }, { passive: true });
+      window.addEventListener('touchmove', (e) => {
+        if (!isDragging || e.touches.length === 0) return;
+        updateSliderPosition(e.touches[0].clientX);
+      }, { passive: true });
+      window.addEventListener('touchend', () => {
+        isDragging = false;
+      });
+    }
+
+    /*************************************************************************
+     * 9. 右侧参数面板交互控制与强制 PNG 规则联动
+     *************************************************************************/
+    function enforcePngRuleUI() {
+      const needAlpha = isTransparencyRequired();
+      const formatSelect = document.getElementById('outputFormatSelect');
+      const lockNotice = document.getElementById('pngLockNotice');
+
+      if (needAlpha) {
+        state.settings.outputFormat = 'image/png';
+        formatSelect.value = 'image/png';
+        formatSelect.disabled = true;
+        lockNotice.classList.remove('hidden');
+      } else {
+        state.settings.outputFormat = state.settings.userPreferredFormat || 'image/png';
+        formatSelect.value = state.settings.outputFormat;
+        formatSelect.disabled = false;
+        lockNotice.classList.add('hidden');
+      }
+    }
+
+    function setCornerMode(mode) {
+      state.settings.cornerMode = mode;
+      const modes = ['none', 'rounded', 'circle'];
+      modes.forEach(m => {
+        const btn = document.getElementById('cornerMode' + m.charAt(0).toUpperCase() + m.slice(1));
+        if (m === mode) {
+          btn.className = 'py-2 px-2 rounded-lg text-xs font-medium transition bg-white text-slate-900 shadow-sm';
+        } else {
+          btn.className = 'py-2 px-2 rounded-lg text-xs font-medium transition text-slate-600 hover:text-slate-900';
+        }
+      });
+
+      document.getElementById('roundedControlsPanel').classList.toggle('hidden', mode !== 'rounded');
+      document.getElementById('circleControlsPanel').classList.toggle('hidden', mode !== 'circle');
+
+      enforcePngRuleUI();
+      scheduleProcessAll();
+    }
+
+    function setCornerUnit(unit) {
+      state.settings.cornerUnit = unit;
+      const slider = document.getElementById('cornerRadiusSlider');
+      const numInput = document.getElementById('cornerRadiusNumber');
+      const unitLabel = document.getElementById('cornerUnitLabel');
+      const btnPx = document.getElementById('unitBtnPx');
+      const btnPct = document.getElementById('unitBtnPercent');
+
+      if (unit === 'px') {
+        btnPx.className = 'px-2.5 py-0.5 rounded-md text-xs font-medium bg-brand-600 text-white transition';
+        btnPct.className = 'px-2.5 py-0.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition';
+        slider.max = 500;
+        numInput.max = 500;
+        if (state.settings.cornerRadius > 500) state.settings.cornerRadius = 48;
+        unitLabel.textContent = 'px';
+      } else {
+        btnPct.className = 'px-2.5 py-0.5 rounded-md text-xs font-medium bg-brand-600 text-white transition';
+        btnPx.className = 'px-2.5 py-0.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition';
+        slider.max = 50;
+        numInput.max = 50;
+        if (state.settings.cornerRadius > 50) state.settings.cornerRadius = 20;
+        unitLabel.textContent = '%';
+      }
+      slider.value = state.settings.cornerRadius;
+      numInput.value = state.settings.cornerRadius;
+      enforcePngRuleUI();
+      scheduleProcessAll();
+    }
+
+    function syncCornerRadiusFromSlider(val) {
+      const v = Math.max(0, parseInt(val, 10) || 0);
+      state.settings.cornerRadius = v;
+      document.getElementById('cornerRadiusNumber').value = v;
+      enforcePngRuleUI();
+      scheduleProcessAll();
+    }
+
+    function syncCornerRadiusFromInput(val) {
+      const maxVal = state.settings.cornerUnit === 'percent' ? 50 : 500;
+      const v = Math.max(0, Math.min(maxVal, parseInt(val, 10) || 0));
+      state.settings.cornerRadius = v;
+      document.getElementById('cornerRadiusSlider').value = v;
+      enforcePngRuleUI();
+      scheduleProcessAll();
+    }
+
+    function setQuickRadius(val) {
+      if (state.settings.cornerUnit === 'percent' && val > 50) {
+        setCornerUnit('px');
+      }
+      syncCornerRadiusFromInput(val);
+    }
+
+    function handleQualityChange(val) {
+      const q = Math.max(1, Math.min(100, parseInt(val, 10) || 85));
+      state.settings.quality = q;
+      document.getElementById('qualityValueBadge').textContent = `${q}%`;
+      scheduleProcessAll();
+    }
+
+    function handleFormatChange(mime) {
+      state.settings.userPreferredFormat = mime;
+      state.settings.outputFormat = mime;
+      scheduleProcessAll();
+    }
+
+    function setResizeMode(mode) {
+      state.settings.resizeMode = mode;
+      const map = {
+        original: 'resizeModeOriginal',
+        percent: 'resizeModePercent',
+        custom: 'resizeModeCustom'
+      };
+      Object.entries(map).forEach(([k, btnId]) => {
+        const btn = document.getElementById(btnId);
+        if (k === mode) {
+          btn.className = 'py-1.5 px-2 rounded-lg text-xs font-medium bg-white text-slate-900 shadow-sm transition';
+        } else {
+          btn.className = 'py-1.5 px-2 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition';
+        }
+      });
+
+      document.getElementById('resizePercentPanel').classList.toggle('hidden', mode !== 'percent');
+      document.getElementById('resizeCustomPanel').classList.toggle('hidden', mode !== 'custom');
+
+      if (mode === 'custom') {
+        syncCustomDimensionInputsToSelected();
+      }
+      scheduleProcessAll();
+    }
+
+    function syncCustomDimensionInputsToSelected() {
+      const item = state.images.find(i => i.id === state.selectedId);
+      if (item) {
+        state.settings.customWidth = item.origWidth;
+        state.settings.customHeight = item.origHeight;
+        document.getElementById('customWidthInput').value = item.origWidth;
+        document.getElementById('customHeightInput').value = item.origHeight;
+      }
+    }
+
+    function handleScaleChange(val) {
+      const s = Math.max(10, Math.min(200, parseInt(val, 10) || 100));
+      state.settings.resizeScale = s;
+      document.getElementById('resizeScaleLabel').textContent = `${s}%`;
+      scheduleProcessAll();
+    }
+
+    function setQuickScale(val) {
+      document.getElementById('resizeScaleSlider').value = val;
+      handleScaleChange(val);
+    }
+
+    function handleCustomDimensionInput(axis, val) {
+      const num = Math.max(1, Math.min(8000, parseInt(val, 10) || 1));
+      const item = state.images.find(i => i.id === state.selectedId);
+      const ratio = item && item.origHeight > 0 ? item.origWidth / item.origHeight : 4 / 3;
+
+      if (axis === 'w') {
+        state.settings.customWidth = num;
+        if (state.settings.lockAspect) {
+          const newH = Math.max(1, Math.round(num / ratio));
+          state.settings.customHeight = newH;
+          document.getElementById('customHeightInput').value = newH;
+        }
+      } else {
+        state.settings.customHeight = num;
+        if (state.settings.lockAspect) {
+          const newW = Math.max(1, Math.round(num * ratio));
+          state.settings.customWidth = newW;
+          document.getElementById('customWidthInput').value = newW;
+        }
+      }
+      scheduleProcessAll();
+    }
+
+    function handleLockAspectChange(checked) {
+      state.settings.lockAspect = checked;
+      if (checked) {
+        handleCustomDimensionInput('w', state.settings.customWidth);
+      }
+    }
+
+    function resetSettings() {
+      state.settings.cornerMode = 'rounded';
+      state.settings.cornerUnit = 'px';
+      state.settings.cornerRadius = 48;
+      state.settings.quality = 85;
+      state.settings.outputFormat = 'image/png';
+      state.settings.userPreferredFormat = 'image/png';
+      state.settings.resizeMode = 'original';
+      state.settings.resizeScale = 100;
+
+      document.getElementById('cornerRadiusSlider').value = 48;
+      document.getElementById('cornerRadiusNumber').value = 48;
+      document.getElementById('qualitySlider').value = 85;
+      document.getElementById('qualityValueBadge').textContent = '85%';
+      document.getElementById('resizeScaleSlider').value = 100;
+      document.getElementById('resizeScaleLabel').textContent = '100%';
+
+      setCornerUnit('px');
+      setCornerMode('rounded');
+      setResizeMode('original');
+      showToast('参数已重置为默认配置', 'info');
+    }
+
+    /*************************************************************************
+     * 10. 批量打包下载 ZIP (JSZip + 内置二进制 PKZIP 双重保障)
+     *************************************************************************/
+    async function downloadAllAsZip() {
+      if (state.images.length === 0) return;
+      const btn = document.getElementById('btnDownloadZip');
+      const btnText = document.getElementById('zipBtnText');
+      const origText = btnText.textContent;
+
+      btn.disabled = true;
+      btnText.textContent = '正在打包生成 ZIP...';
+
+      try {
+        // 确保所有图片都已经最新处理完毕
+        for (const item of state.images) {
+          if (!item.outBlob) await processSingleImageItem(item);
+        }
+
+        let zipBlob = null;
+        const usedNames = new Set();
+        const getUniqueName = (rawName) => {
+          let name = rawName;
+          let counter = 1;
+          while (usedNames.has(name)) {
+            const dotIndex = rawName.lastIndexOf('.');
+            name = `${rawName.slice(0, dotIndex)}_${counter}${rawName.slice(dotIndex)}`;
+            counter++;
+          }
+          usedNames.add(name);
+          return name;
+        };
+
+        if (typeof window.JSZip !== 'undefined') {
+          const zip = new window.JSZip();
+          for (const item of state.images) {
+            const fileName = getUniqueName(getOutputFileName(item));
+            zip.file(fileName, item.outBlob);
+          }
+          zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+        } else {
+          // 使用内置纯 JS 二进制 ZIP 引擎
+          const entries = [];
+          for (const item of state.images) {
+            const fileName = getUniqueName(getOutputFileName(item));
+            const buf = await item.outBlob.arrayBuffer();
+            entries.push({ name: fileName, data: new Uint8Array(buf) });
+          }
+          zipBlob = createFallbackZipBlob(entries);
+        }
+
+        const zipUrl = URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = zipUrl;
+        a.download = `processed_images_${state.images.length}files.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(zipUrl), 5000);
+
+        showToast(`已成功打包下载 ${state.images.length} 张图片 (${formatBytes(zipBlob.size)})！`, 'success');
+      } catch (err) {
+        console.error('ZIP 打包失败:', err);
+        showToast('打包 ZIP 发生错误，请重试', 'error');
+      } finally {
+        btn.disabled = state.images.length === 0;
+        btnText.textContent = origText;
+      }
+    }
+
+    /*************************************************************************
+     * 11. 应用启动初始化
+     *************************************************************************/
+    window.onload = function () {
+      initDragAndDrop();
+      initSplitSliderInteraction();
+      setCornerMode('rounded');
+    };
+  </script>
+</body>
+</html>
