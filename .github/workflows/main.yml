@@ -1,0 +1,31 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. 拉取仓库代码
+        uses: actions/checkout@v4
+
+      - name: 2. 登录 GitHub 官方镜像库 (无需手动配密码)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 3. 构建纯镜像并自动上传
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/image-tool:latest
