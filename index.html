@@ -436,23 +436,19 @@
 
       <hr class="border-slate-100" />
 
-     <!-- 3. 目标输出格式转换 -->
+      <!-- 3. 目标输出格式转换 -->
       <div class="flex flex-col gap-2.5">
         <label class="text-xs font-semibold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
           <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
           3. 输出格式转换
         </label>
 
-        <select id="outputFormatSelect" onchange="handleFormatChange(this.value)" class="w-full px-3 py-2 text-xs sm:text-sm font-medium bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-brand-500 cursor-pointer">
-          <option value="image/png" selected>PNG — 默认无损透明格式 (推荐圆角/图标)</option>
-          <option value="image/jpeg">JPG / JPEG — 通用照片高压缩比格式</option>
-          <option value="image/webp">WEBP — 现代高压缩比格式 (支持透明)</option>
-          <option value="image/avif">AVIF — 次世代超高压缩比格式 (支持透明)</option>
-          <option value="image/gif">GIF — 静态 GIF89a 调色板格式 (支持透明)</option>
-          <option value="image/bmp">BMP — 32-bit 原生无损位图格式</option>
-          <option value="image/x-icon">ICO — Windows 网站/桌面标准图标</option>
-          <option value="image/svg+xml">SVG — 矢量容器封装格式 (支持透明)</option>
-          <option value="original">保持原格式 — 按原图自身格式导出</option>
+        <select id="outputFormatSelect" onchange="handleFormatChange(this.value)" class="w-full px-3 py-2 text-xs sm:text-sm font-medium bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:border-brand-500 disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed">
+          <option value="image/png">PNG — 支持完整透明通道 (圆角必选)</option>
+          <option value="image/jpeg">JPG / JPEG — 适合照片高压缩比</option>
+          <option value="image/webp">WEBP — 现代高压缩比格式</option>
+          <option value="image/bmp">BMP — 24/32-bit 原生位图编码</option>
+          <option value="image/gif">GIF — 静态 GIF89a 调色板编码</option>
         </select>
       </div>
 
@@ -1511,7 +1507,7 @@
       if (needAlpha) {
         state.settings.outputFormat = 'image/png';
         formatSelect.value = 'image/png';
-        formatSelect.disabled = false;
+        formatSelect.disabled = true;
         lockNotice.classList.remove('hidden');
       } else {
         state.settings.outputFormat = state.settings.userPreferredFormat || 'image/png';
@@ -1600,17 +1596,11 @@
       scheduleProcessAll();
     }
 
-    function handleFormatChange(val) {
-  state.outputFormat = val; // 如果您的代码里变量名叫 state.format，请保持原变量名
-  const selectEl = document.getElementById('outputFormatSelect');
-  if (selectEl) {
-    selectEl.disabled = false; // 确保永远不锁定下拉菜单
-    selectEl.value = val;
-  }
-  // 触发重新处理图片（请保留您代码里原有的重绘调用函数，例如 scheduleProcessAll() 或 processAllImages()）
-  if (typeof scheduleProcessAll === 'function') scheduleProcessAll();
-  else if (typeof processAllImages === 'function') processAllImages();
-}
+    function handleFormatChange(mime) {
+      state.settings.userPreferredFormat = mime;
+      state.settings.outputFormat = mime;
+      scheduleProcessAll();
+    }
 
     function setResizeMode(mode) {
       state.settings.resizeMode = mode;
