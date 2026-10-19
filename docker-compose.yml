@@ -1,9 +1,0 @@
-services:
- rounded-image-tool:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name:  rounded-image-tool
-    restart: unless-stopped
-    ports:
-      - "7080:80"
